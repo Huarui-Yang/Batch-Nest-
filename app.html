@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kettle &amp; Crumb — Shared Order Book</title>
+<style>
+  :root {
+    --cream: #fdf6e9;
+    --cream-2: #fbeed6;
+    --white: #ffffff;
+    --ink: #2b2118;
+    --ink-soft: #5c4b3a;
+    --teal: #0e8f8a;
+    --teal-dark: #0a6f6b;
+    --teal-light: #d6f1ef;
+    --orange: #f5821f;
+    --orange-dark: #d96c0c;
+    --orange-light: #ffe9d1;
+    --red: #c81e14;
+    --red-bg: #fde7e5;
+    --red-line: #c81e14;
+    --amber: #9a6100;
+    --amber-bg: #fff2d6;
+    --amber-line: #e39a00;
+    --green: #1f7a45;
+    --green-bg: #e3f4e9;
+    --line: #efe0c6;
+    --line-strong: #e2cca8;
+    --shadow: 0 3px 10px rgba(43,33,24,.09);
+    --shadow-lg: 0 8px 30px rgba(43,33,24,.22);
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  h1, h2, h3 { line-height: 1.25; }
+
+  /* ---------- Header ---------- */
+  header.app-header {
+    background: var(--white);
+    border-bottom: 4px solid var(--teal);
+    padding: 22px 18px;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+  }
+  .header-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 1.6rem;
+    color: var(--ink);
+  }
+  .brand h1 .accent { color: var(--teal); }
+  .brand p {
+    margin: 4px 0 0;
+    font-size: .9rem;
+    color: var(--ink-soft);
+  }
+
+  .btn {
+    border: none;
+    border-radius: 12px;
+    padding: 13px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    transition: transform .05s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary {
+    background: var(--teal);
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(14,143,138,.35);
+  }
+  .btn-primary:hover { background: var(--teal-dark); }
+  .btn-orange {
+    background: var(--orange);
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(245,130,31,.4);
+  }
+  .btn-orange:hover { background: var(--orange-dark); }
+  .btn-secondary {
+    background: #fff;
+    color: var(--teal-dark);
+    border: 2px solid var(--teal-light);
+  }
+  .btn-secondary:hover { background: var(--teal-light); }
+  .btn-outline {
+    background: #fff;
+    color: var(--ink-soft);
+    border: 2px solid var(--line-strong);
+  }
+  .btn-outline:hover { background: var(--cream-2); }
+  .btn-danger {
+    background: #fff;
+    color: var(--red);
+    border: 2px solid #f2c4c0;
+  }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-small { padding: 9px 14px; font-size: .88rem; border-radius: 10px; }
+  .btn-hero {
+    padding: 15px 28px;
+    font-size: 1.1rem;
+    border-radius: 14px;
+    white-space: nowrap;
+  }
+
+  /* ---------- Layout ---------- */
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 22px 18px 60px;
+  }
+
+  .notice {
+    background: var(--orange-light);
+    border: 2px solid #f8d3a8;
+    color: #7a4406;
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    font-size: .92rem;
+    margin-bottom: 22px;
+  }
+  .notice strong { color: #5f3404; }
+
+  h2.section {
+    font-size: 1.3rem;
+    margin: 0 0 14px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2.section::before {
+    content: "";
+    width: 6px;
+    height: 24px;
+    background: var(--orange);
+    border-radius: 4px;
+    display: inline-block;
+  }
+
+  /* ---------- Summary cards ---------- */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .summary-card {
+    background: var(--white);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    border-top: 5px solid var(--teal);
+  }
+  .summary-card .num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .summary-card .lbl {
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+  }
+  .summary-card.is-new { border-top-color: #3a76c4; }
+  .summary-card.is-ready { border-top-color: var(--green); }
+  .summary-card.is-allergy { border-top-color: var(--red); }
+  .summary-card.is-allergy .num { color: var(--red); }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    background: var(--white);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: flex-end;
+    margin-bottom: 26px;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1 1 190px;
+  }
+  .field label {
+    font-size: .82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--teal-dark);
+  }
+  input, select, textarea {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 11px 13px;
+    border: 2px solid var(--line-strong);
+    border-radius: 11px;
+    background: #fff;
+    color: var(--ink);
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 3px solid var(--teal-light);
+    border-color: var(--teal);
+  }
+  textarea { min-height: 78px; resize: vertical; }
+
+  /* ---------- Order list ---------- */
+  .list-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .list-head h2 { margin: 0; font-size: 1.3rem; }
+  .count {
+    font-size: .9rem;
+    color: var(--ink-soft);
+    background: var(--cream-2);
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+
+  .orders {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 18px;
+  }
+
+  .order-card {
+    background: var(--white);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .order-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .order-top h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--ink);
+  }
+  .order-meta {
+    font-size: .88rem;
+    color: var(--ink-soft);
+    margin-top: 3px;
+    word-break: break-word;
+  }
+  .badges {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 800;
+    white-space: nowrap;
+    letter-spacing: .3px;
+  }
+  .badge-channel { background: var(--orange-light); color: var(--orange-dark); border: 2px solid #f6c793; }
+  .badge-status-New { background: #e3eefb; color: #1f5da8; border: 2px solid #bcd6f3; }
+  .badge-status-Confirmed { background: #efe0f8; color: #6a2f8a; border: 2px solid #dcc2ee; }
+  .badge-status-Inpreparation { background: var(--amber-bg); color: var(--amber); border: 2px solid #f0cf8a; }
+  .badge-status-Ready { background: var(--green-bg); color: var(--green); border: 2px solid #b7dfc4; }
+  .badge-status-Completed { background: #eceae6; color: #5c5c5c; border: 2px solid #d8d4cc; }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 16px;
+    font-size: .95rem;
+  }
+  .facts .k, .food-line .k {
+    color: var(--teal-dark);
+    font-weight: 800;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    display: block;
+  }
+  .food-line {
+    font-size: .95rem;
+    background: var(--cream);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  /* ---------- Allergy banners (large) ---------- */
+  .allergy {
+    border-radius: 12px;
+    padding: 14px 16px;
+    border-left: 8px solid;
+  }
+  .allergy .allergy-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    font-size: 1.02rem;
+    font-weight: 900;
+  }
+  .allergy .allergy-detail {
+    font-weight: 600;
+    margin-top: 5px;
+    font-size: 1.02rem;
+  }
+  .allergy-reported { background: var(--red-bg); color: var(--red); border-color: var(--red-line); }
+  .allergy-reported .allergy-head { font-size: 1.1rem; }
+  .allergy-unchecked { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-line); }
+  .allergy-none { background: var(--green-bg); color: var(--green); border-color: #7cc194; }
+
+  /* ---------- Card actions ---------- */
+  .card-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 6px;
+    border-top: 1px solid var(--line);
+  }
+  .card-actions .btn { flex: 1 1 auto; }
+
+  .empty {
+    background: var(--white);
+    border: 3px dashed var(--line-strong);
+    border-radius: var(--radius);
+    padding: 50px 20px;
+    text-align: center;
+    color: var(--ink-soft);
+    grid-column: 1 / -1;
+    font-size: 1.05rem;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(43,33,24,.55);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 50;
+  }
+  .modal-backdrop[hidden] { display: none; }
+  .modal {
+    background: var(--cream);
+    border-radius: 18px;
+    max-width: 760px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    margin: 10px 0 40px;
+    overflow: hidden;
+  }
+  .modal.modal-narrow { max-width: 520px; }
+  .modal-head {
+    background: var(--teal);
+    color: #fff;
+    padding: 18px 22px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-head h2 { margin: 0; font-size: 1.3rem; }
+  .modal-close {
+    background: rgba(255,255,255,.18);
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 2px 12px;
+    border-radius: 8px;
+  }
+  .modal-close:hover { background: rgba(255,255,255,.32); }
+  .modal-body { padding: 22px; }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+
+  .section-title {
+    grid-column: 1 / -1;
+    font-size: .85rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--orange-dark);
+    border-bottom: 3px solid var(--line);
+    padding-bottom: 6px;
+    margin-top: 10px;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 2px solid var(--line-strong);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: .97rem;
+    font-weight: 700;
+    cursor: pointer;
+    flex: 1 1 auto;
+  }
+  .radio-group input { width: auto; accent-color: var(--teal); }
+  .radio-group label:has(input:checked) {
+    border-color: var(--teal);
+    background: var(--teal-light);
+  }
+
+  .allergy-warning-box {
+    grid-column: 1 / -1;
+    background: var(--red-bg);
+    border: 2px solid #f0c2be;
+    border-left: 8px solid var(--red);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--red);
+    font-size: .95rem;
+    font-weight: 700;
+  }
+
+  .error-msg {
+    color: var(--red);
+    font-size: .88rem;
+    font-weight: 700;
+    margin-top: 6px;
+    display: none;
+  }
+  .error-msg.show { display: block; }
+
+  .modal-foot {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 0 22px 22px;
+    flex-wrap: wrap;
+  }
+  .modal-foot .spacer { margin-right: auto; }
+
+  /* ---------- Details view ---------- */
+  .detail-allergy { margin-bottom: 18px; }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .detail-item {
+    background: #fff;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .detail-item .k {
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--teal-dark);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .detail-item.full { grid-column: 1 / -1; }
+
+  /* ---------- Status chooser ---------- */
+  .status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .status-options button {
+    text-align: left;
+    padding: 15px 18px;
+    border-radius: 12px;
+    border: 2px solid var(--line-strong);
+    background: #fff;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .status-options button:hover { border-color: var(--teal); background: var(--teal-light); }
+  .status-options button.current {
+    border-color: var(--teal);
+    background: var(--teal);
+    color: #fff;
+  }
+  .status-options button.current::after { content: "  ✓ current"; font-size: .85rem; opacity: .9; }
+
+  /* ---------- Toast ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translate(-50%, 130%);
+    background: var(--green);
+    color: #fff;
+    padding: 15px 26px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1.02rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    transition: transform .28s ease;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { transform: translate(-50%, 0); }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .facts { grid-template-columns: 1fr; }
+    .brand h1 { font-size: 1.3rem; }
+    .header-inner { flex-direction: column; align-items: stretch; }
+    .btn-hero { width: 100%; }
+    .modal-foot { flex-direction: column-reverse; }
+    .modal-foot .spacer { display: none; }
+    .modal-foot .btn { width: 100%; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .orders { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-inner">
+    <div class="brand">
+      <h1><span class="accent">Kettle &amp; Crumb</span> — Shared Order Book</h1>
+      <p>Café · Bakery · Catering &nbsp;•&nbsp; One book for Phone, Email, Instagram &amp; WhatsApp</p>
+    </div>
+    <button class="btn btn-orange btn-hero" id="addOrderBtn">+ Add New Order</button>
+  </div>
+</header>
+
+<main>
+  <div class="notice">
+    <strong>Local demo:</strong> This is an internal alpha prototype. Staff enter orders manually from each channel — there are no live connections to WhatsApp, Instagram or email. Orders are saved in this browser only.
+  </div>
+
+  <h2 class="section">Overview</h2>
+  <div class="summary" id="summary">
+    <div class="summary-card" id="sumTotal">
+      <div class="num">0</div>
+      <div class="lbl">Total Orders</div>
+    </div>
+    <div class="summary-card is-new" id="sumNew">
+      <div class="num">0</div>
+      <div class="lbl">New Orders</div>
+    </div>
+    <div class="summary-card is-ready" id="sumReady">
+      <div class="num">0</div>
+      <div class="lbl">Ready Orders</div>
+    </div>
+    <div class="summary-card is-allergy" id="sumAllergy">
+      <div class="num">0</div>
+      <div class="lbl">Reported Allergies</div>
+    </div>
+  </div>
+
+  <h2 class="section">Find an Order</h2>
+  <div class="toolbar">
+    <div class="field" style="flex:2 1 260px;">
+      <label for="search">Search orders (name, contact, food, notes)</label>
+      <input type="search" id="search" placeholder="Type to search…">
+    </div>
+    <div class="field">
+      <label for="filterSource">Filter by channel / source</label>
+      <select id="filterSource">
+        <option value="">All channels</option>
+        <option>Phone</option>
+        <option>Email</option>
+        <option>Instagram</option>
+        <option>WhatsApp</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="filterStatus">Filter by order status</label>
+      <select id="filterStatus">
+        <option value="">All statuses</option>
+        <option>New</option>
+        <option>Confirmed</option>
+        <option>In preparation</option>
+        <option>Ready</option>
+        <option>Completed</option>
+      </select>
+    </div>
+    <div class="field" style="flex:0 0 auto;">
+      <label>&nbsp;</label>
+      <button class="btn btn-outline" id="clearFilters">Clear Filters</button>
+    </div>
+  </div>
+
+  <div class="list-head">
+    <h2>Order Book</h2>
+    <span class="count" id="orderCount"></span>
+  </div>
+
+  <div class="orders" id="orders"></div>
+</main>
+
+<!-- Order form modal -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <h2 id="modalTitle">Add Order</h2>
+      <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+    </div>
+
+    <form id="orderForm" novalidate>
+      <div class="modal-body">
+        <div class="form-grid">
+
+          <div class="section-title">Customer</div>
+          <div class="field">
+            <label for="customerName">Customer name *</label>
+            <input type="text" id="customerName" required>
+          </div>
+          <div class="field">
+            <label for="contact">Contact details *</label>
+            <input type="text" id="contact" required placeholder="Phone, email or handle">
+          </div>
+
+          <div class="section-title">Order source</div>
+          <div class="field full">
+            <div class="radio-group" id="sourceGroup">
+              <label><input type="radio" name="source" value="Phone"> Phone</label>
+              <label><input type="radio" name="source" value="Email"> Email</label>
+              <label><input type="radio" name="source" value="Instagram"> Instagram</label>
+              <label><input type="radio" name="source" value="WhatsApp"> WhatsApp</label>
+            </div>
+            <span class="error-msg" id="sourceError">Please choose an order source.</span>
+          </div>
+
+          <div class="section-title">Event details</div>
+          <div class="field">
+            <label for="eventType">Event type *</label>
+            <select id="eventType" required>
+              <option value="">Select event type…</option>
+              <option>Funeral</option>
+              <option>Wedding</option>
+              <option>Birthday</option>
+              <option>Corporate</option>
+              <option>Christening</option>
+              <option>Wake</option>
+              <option>Anniversary</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="eventDate">Event date *</label>
+            <input type="date" id="eventDate" required>
+          </div>
+          <div class="field">
+            <label for="eventTime">Event time *</label>
+            <input type="time" id="eventTime" required>
+          </div>
+          <div class="field">
+            <label for="guests">Number of guests *</label>
+            <input type="number" id="guests" min="1" step="1" required>
+          </div>
+
+          <div class="field full">
+            <label for="food">Food requested *</label>
+            <textarea id="food" required placeholder="e.g. Finger buffet for 30, mixed sandwiches, scones, tea and coffee"></textarea>
+          </div>
+
+          <div class="section-title">Fulfilment</div>
+          <div class="field">
+            <label for="fulfilment">Delivery or collection *</label>
+            <select id="fulfilment" required>
+              <option value="">Select…</option>
+              <option>Delivery</option>
+              <option>Collection</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="location">Location / address</label>
+            <input type="text" id="location" placeholder="Address or collection note">
+          </div>
+
+          <div class="section-title">Allergy information</div>
+          <div class="field full">
+            <div class="radio-group" id="allergyGroup">
+              <label><input type="radio" name="allergyStatus" value="Not yet checked"> Not yet checked</label>
+              <label><input type="radio" name="allergyStatus" value="No known allergies"> No known allergies</label>
+              <label><input type="radio" name="allergyStatus" value="Allergy reported"> Allergy reported</label>
+            </div>
+            <span class="error-msg" id="allergyError">Please choose an allergy status.</span>
+          </div>
+          <div class="field full" id="allergyDetailsWrap" style="display:none;">
+            <div class="allergy-warning-box">⚠ Allergy reported — this must be visible to all staff. Record the allergy below.</div>
+            <label for="allergyDetails" style="margin-top:10px;">Allergy details * (required)</label>
+            <textarea id="allergyDetails" placeholder="e.g. Severe nut allergy — order for Zara."></textarea>
+            <span class="error-msg" id="allergyDetailsError">Allergy details are required when an allergy is reported.</span>
+          </div>
+
+          <div class="section-title">Notes</div>
+          <div class="field full">
+            <label for="notes">Staff notes</label>
+            <textarea id="notes" placeholder="Any internal notes for the team"></textarea>
+          </div>
+
+          <div class="field full">
+            <label for="status">Order status</label>
+            <select id="status">
+              <option>New</option>
+              <option>Confirmed</option>
+              <option>In preparation</option>
+              <option>Ready</option>
+              <option>Completed</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button type="button" class="btn btn-danger" id="deleteBtn" style="display:none;">Delete Order</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-outline" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveBtn">Save Order</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Details modal -->
+<div class="modal-backdrop" id="detailBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="modal-head">
+      <h2 id="detailTitle">Order Details</h2>
+      <button class="modal-close" id="detailClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-outline" id="detailEditBtn">Edit Order</button>
+      <button type="button" class="btn btn-orange" id="detailStatusBtn">Change Status</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status modal -->
+<div class="modal-backdrop" id="statusBackdrop" hidden>
+  <div class="modal modal-narrow" role="dialog" aria-modal="true" aria-labelledby="statusTitle">
+    <div class="modal-head">
+      <h2 id="statusTitle">Change Order Status</h2>
+      <button class="modal-close" id="statusClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="status-options" id="statusOptions"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "kettlecrumb_orders_v1";
+  var STATUS_FLOW = ["New", "Confirmed", "In preparation", "Ready", "Completed"];
+  var orders = [];
+  var editingId = null;
+  var detailId = null;
+  var statusId = null;
+  var toastTimer = null;
+
+  /* ---------- Sample data (clearly fictional) ---------- */
+  function sampleOrders() {
+    return [
+      {
+        id: "sample-1", sample: true,
+        customerName: "Sample — Margaret Ellery",
+        contact: "07700 900123 (fictional)",
+        source: "Phone", eventType: "Funeral",
+        eventDate: "2026-11-04", eventTime: "13:30", guests: 30,
+        food: "Finger buffet for 30, mixed sandwiches, sausage rolls, scones with jam and cream, tea and coffee.",
+        fulfilment: "Delivery", location: "St Mary's Church Hall, Fictional Lane",
+        allergyStatus: "Allergy reported",
+        allergyDetails: "Severe nut allergy — no nuts or traces of nuts in any item. Sample data.",
+        notes: "Sample order — quiet setup requested. Contact is Margaret's daughter.",
+        status: "Confirmed"
+      },
+      {
+        id: "sample-2", sample: true,
+        customerName: "Sample — Hazelbrook Primary PTA",
+        contact: "pta@example-fictional.test",
+        source: "Email", eventType: "Corporate",
+        eventDate: "2026-10-20", eventTime: "09:00", guests: 45,
+        food: "Breakfast pastries, fruit platters and two coffee urns.",
+        fulfilment: "Delivery", location: "Hazelbrook Primary, Main Hall",
+        allergyStatus: "No known allergies", allergyDetails: "",
+        notes: "Sample order — invoice to PTA treasurer.",
+        status: "In preparation"
+      },
+      {
+        id: "sample-3", sample: true,
+        customerName: "Sample — @thefictionalbakeryclub",
+        contact: "@thefictionalbakeryclub",
+        source: "Instagram", eventType: "Birthday",
+        eventDate: "2026-10-18", eventTime: "15:00", guests: 20,
+        food: "Two-tier celebration cake (vanilla) plus 20 cupcakes.",
+        fulfilment: "Collection", location: "Collect from café, 10am",
+        allergyStatus: "Not yet checked", allergyDetails: "",
+        notes: "Sample order — still need to confirm allergy status with customer.",
+        status: "New"
+      },
+      {
+        id: "sample-4", sample: true,
+        customerName: "Sample — Tom Whittal",
+        contact: "07700 900456 (fictional)",
+        source: "WhatsApp", eventType: "Wake",
+        eventDate: "2026-10-15", eventTime: "16:00", guests: 12,
+        food: "Afternoon tea: sandwiches, cakes and scones for 12.",
+        fulfilment: "Delivery", location: "The fictional Riverside home, 4 Fictional Road",
+        allergyStatus: "Allergy reported",
+        allergyDetails: "Celiac / gluten allergy — needs separate gluten-free plate. Sample data.",
+        notes: "Sample order — deliver 30 minutes before start.",
+        status: "Ready"
+      }
+    ];
+  }
+
+  /* ---------- Storage ---------- */
+  function loadOrders() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw === null) {
+        orders = sampleOrders();
+        saveOrders();
+      } else {
+        orders = JSON.parse(raw);
+        if (!Array.isArray(orders)) orders = sampleOrders();
+      }
+    } catch (e) {
+      orders = sampleOrders();
+    }
+  }
+  function saveOrders() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    } catch (e) {
+      alert("Could not save orders in this browser.");
+    }
+  }
+
+  /* ---------- Helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+  function uid() { return "ord-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8); }
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function formatDate(d) {
+    if (!d) return "—";
+    var p = d.split("-");
+    if (p.length !== 3) return d;
+    var dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    if (isNaN(dt)) return d;
+    return dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  function statusClass(s) { return "badge-status-" + String(s).replace(/\s+/g, ""); }
+
+  function allergyBanner(order) {
+    var status = order.allergyStatus || "Not yet checked";
+    if (status === "Allergy reported") {
+      return '<div class="allergy allergy-reported">' +
+        '<div class="allergy-head">⚠ ALLERGY REPORTED</div>' +
+        '<div class="allergy-detail">' + esc(order.allergyDetails || "Details missing — check now.") + "</div></div>";
+    }
+    if (status === "Not yet checked") {
+      return '<div class="allergy allergy-unchecked">' +
+        '<div class="allergy-head">? ALLERGY NOT YET CHECKED</div>' +
+        '<div class="allergy-detail">Confirm allergy status with the customer before preparing food.</div></div>';
+    }
+    return '<div class="allergy allergy-none">' +
+      '<div class="allergy-head">✓ NO KNOWN ALLERGIES</div>' +
+      '<div class="allergy-detail">Confirmed by staff for this order.</div></div>';
+  }
+
+  /* ---------- Toast ---------- */
+  function showToast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 3200);
+  }
+
+  /* ---------- Summary ---------- */
+  function renderSummary() {
+    var total = orders.length;
+    var newCount = orders.filter(function (o) { return o.status === "New"; }).length;
+    var ready = orders.filter(function (o) { return o.status === "Ready"; }).length;
+    var allergy = orders.filter(function (o) { return o.allergyStatus === "Allergy reported"; }).length;
+    $("sumTotal").querySelector(".num").textContent = total;
+    $("sumNew").querySelector(".num").textContent = newCount;
+    $("sumReady").querySelector(".num").textContent = ready;
+    $("sumAllergy").querySelector(".num").textContent = allergy;
+  }
+
+  /* ---------- Rendering ---------- */
+  function matchesFilters(o) {
+    var q = $("search").value.trim().toLowerCase();
+    var fs = $("filterSource").value;
+    var fstat = $("filterStatus").value;
+    if (fs && o.source !== fs) return false;
+    if (fstat && o.status !== fstat) return false;
+    if (q) {
+      var hay = [o.customerName, o.contact, o.food, o.notes, o.allergyDetails, o.location, o.eventType]
+        .join(" ").toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  function render() {
+    renderSummary();
+    var list = $("orders");
+    var visible = orders.filter(matchesFilters);
+    $("orderCount").textContent = visible.length + " of " + orders.length + " order" + (orders.length === 1 ? "" : "s");
+
+    if (orders.length === 0) {
+      list.innerHTML = '<div class="empty">No orders yet. Click <strong>+ Add New Order</strong> to add the first one.</div>';
+      return;
+    }
+    if (visible.length === 0) {
+      list.innerHTML = '<div class="empty">No orders match your search or filters.</div>';
+      return;
+    }
+
+    var sorted = visible.slice().sort(function (a, b) {
+      var da = (a.eventDate || "") + " " + (a.eventTime || "");
+      var db = (b.eventDate || "") + " " + (b.eventTime || "");
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
+
+    list.innerHTML = sorted.map(function (o) {
+      return '<article class="order-card">' +
+        '<div class="order-top">' +
+          '<div>' +
+            '<h3>' + esc(o.customerName) + '</h3>' +
+            '<div class="order-meta">' + esc(o.contact) + '</div>' +
+          '</div>' +
+          '<div class="badges">' +
+            '<span class="badge badge-channel">' + esc(o.source) + '</span>' +
+            '<span class="badge ' + statusClass(o.status) + '">' + esc(o.status) + '</span>' +
+          '</div>' +
+        '</div>' +
+        allergyBanner(o) +
+        '<div class="facts">' +
+          '<div><span class="k">Event</span>' + esc(o.eventType) + '</div>' +
+          '<div><span class="k">Guests</span>' + esc(o.guests) + '</div>' +
+          '<div><span class="k">Date</span>' + esc(formatDate(o.eventDate)) + '</div>' +
+          '<div><span class="k">Time</span>' + esc(o.eventTime) + '</div>' +
+          '<div><span class="k">Fulfilment</span>' + esc(o.fulfilment) + '</div>' +
+          '<div><span class="k">Location</span>' + esc(o.location || "—") + '</div>' +
+        '</div>' +
+        '<div class="food-line"><span class="k">Food requested</span>' + esc(o.food) + '</div>' +
+        (o.notes ? '<div class="food-line"><span class="k">Staff notes</span>' + esc(o.notes) + '</div>' : '') +
+        '<div class="card-actions">' +
+          '<button class="btn btn-secondary btn-small" data-view="' + esc(o.id) + '">View Details</button>' +
+          '<button class="btn btn-outline btn-small" data-edit="' + esc(o.id) + '">Edit Order</button>' +
+          '<button class="btn btn-orange btn-small" data-status="' + esc(o.id) + '">Change Status</button>' +
+        '</div>' +
+      '</article>';
+    }).join("");
+  }
+
+  /* ---------- Details modal ---------- */
+  function openDetails(id) {
+    var o = orders.find(function (x) { return x.id === id; });
+    if (!o) return;
+    detailId = id;
+    $("detailTitle").textContent = o.customerName;
+    $("detailBody").innerHTML =
+      '<div class="detail-allergy">' + allergyBanner(o) + '</div>' +
+      '<div class="detail-grid">' +
+        '<div class="detail-item"><span class="k">Contact</span>' + esc(o.contact) + '</div>' +
+        '<div class="detail-item"><span class="k">Source</span>' + esc(o.source) + '</div>' +
+        '<div class="detail-item"><span class="k">Status</span><span class="badge ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div>' +
+        '<div class="detail-item"><span class="k">Event type</span>' + esc(o.eventType) + '</div>' +
+        '<div class="detail-item"><span class="k">Date</span>' + esc(formatDate(o.eventDate)) + '</div>' +
+        '<div class="detail-item"><span class="k">Time</span>' + esc(o.eventTime) + '</div>' +
+        '<div class="detail-item"><span class="k">Guests</span>' + esc(o.guests) + '</div>' +
+        '<div class="detail-item"><span class="k">Fulfilment</span>' + esc(o.fulfilment) + '</div>' +
+        '<div class="detail-item full"><span class="k">Location</span>' + esc(o.location || "—") + '</div>' +
+        '<div class="detail-item full"><span class="k">Food requested</span>' + esc(o.food) + '</div>' +
+        '<div class="detail-item full"><span class="k">Staff notes</span>' + esc(o.notes || "—") + '</div>' +
+      '</div>';
+    $("detailBackdrop").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeDetails() {
+    $("detailBackdrop").hidden = true;
+    document.body.style.overflow = "";
+    detailId = null;
+  }
+
+  /* ---------- Status modal ---------- */
+  function openStatus(id) {
+    var o = orders.find(function (x) { return x.id === id; });
+    if (!o) return;
+    statusId = id;
+    $("statusOptions").innerHTML = STATUS_FLOW.map(function (s) {
+      return '<button type="button" data-set="' + esc(s) + '" class="' + (s === o.status ? "current" : "") + '">' + esc(s) + '</button>';
+    }).join("");
+    $("statusBackdrop").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeStatus() {
+    $("statusBackdrop").hidden = true;
+    document.body.style.overflow = "";
+    statusId = null;
+  }
+  function setStatus(newStatus) {
+    var o = orders.find(function (x) { return x.id === statusId; });
+    if (!o) return;
+    o.status = newStatus;
+    saveOrders();
+    render();
+    showToast("Status updated to “" + newStatus + "”");
+    closeStatus();
+  }
+
+  /* ---------- Order form ---------- */
+  function setRadio(name, value) {
+    document.querySelectorAll('input[name="' + name + '"]').forEach(function (r) { r.checked = (r.value === value); });
+  }
+  function getRadio(name) {
+    var r = document.querySelector('input[name="' + name + '"]:checked');
+    return r ? r.value : "";
+  }
+  function hideErrors() {
+    ["sourceError", "allergyError", "allergyDetailsError"].forEach(function (id) { $(id).classList.remove("show"); });
+  }
+  function toggleAllergyDetails() {
+    var isReported = getRadio("allergyStatus") === "Allergy reported";
+    $("allergyDetailsWrap").style.display = isReported ? "block" : "none";
+  }
+
+  function openForm(order) {
+    editingId = order ? order.id : null;
+    hideErrors();
+    $("modalTitle").textContent = order ? "Edit Order" : "Add New Order";
+    $("deleteBtn").style.display = order ? "inline-block" : "none";
+
+    $("customerName").value = order ? order.customerName : "";
+    $("contact").value = order ? order.contact : "";
+    $("eventType").value = order ? order.eventType : "";
+    $("eventDate").value = order ? order.eventDate : "";
+    $("eventTime").value = order ? order.eventTime : "";
+    $("guests").value = order ? order.guests : "";
+    $("food").value = order ? order.food : "";
+    $("fulfilment").value = order ? order.fulfilment : "";
+    $("location").value = order ? order.location : "";
+    $("allergyDetails").value = order ? order.allergyDetails : "";
+    $("notes").value = order ? order.notes : "";
+    $("status").value = order ? order.status : "New";
+    $("customerName").style.borderColor = "";
+
+    setRadio("source", order ? order.source : "");
+    setRadio("allergyStatus", order ? order.allergyStatus : "");
+    toggleAllergyDetails();
+
+    $("modalBackdrop").hidden = false;
+    document.body.style.overflow = "hidden";
+    $("customerName").focus();
+  }
+  function closeForm() {
+    $("modalBackdrop").hidden = true;
+    document.body.style.overflow = "";
+    editingId = null;
+  }
+
+  function validate() {
+    hideErrors();
+    var ok = true;
+    $("customerName").style.borderColor = "";
+    if (!$("customerName").value.trim()) { ok = false; $("customerName").style.borderColor = "#c81e14"; }
+    if (!$("contact").value.trim()) ok = false;
+    if (!$("eventType").value) ok = false;
+    if (!$("eventDate").value) ok = false;
+    if (!$("eventTime").value) ok = false;
+    if (!$("guests").value || Number($("guests").value) < 1) ok = false;
+    if (!$("food").value.trim()) ok = false;
+    if (!$("fulfilment").value) ok = false;
+
+    var src = getRadio("source");
+    if (!src) { ok = false; $("sourceError").classList.add("show"); }
+
+    var al = getRadio("allergyStatus");
+    if (!al) { ok = false; $("allergyError").classList.add("show"); }
+
+    if (al === "Allergy reported" && !$("allergyDetails").value.trim()) {
+      ok = false;
+      $("allergyDetailsError").classList.add("show");
+    }
+    if (!ok) alert("Please complete all required fields marked with *.");
+    return ok;
+  }
+
+  function submitForm(e) {
+    e.preventDefault();
+    if (!validate()) return;
+
+    var allergyStatus = getRadio("allergyStatus");
+    var data = {
+      customerName: $("customerName").value.trim(),
+      contact: $("contact").value.trim(),
+      source: getRadio("source"),
+      eventType: $("eventType").value,
+      eventDate: $("eventDate").value,
+      eventTime: $("eventTime").value,
+      guests: Number($("guests").value),
+      food: $("food").value.trim(),
+      fulfilment: $("fulfilment").value,
+      location: $("location").value.trim(),
+      allergyStatus: allergyStatus,
+      allergyDetails: allergyStatus === "Allergy reported" ? $("allergyDetails").value.trim() : "",
+      notes: $("notes").value.trim(),
+      status: $("status").value
+    };
+
+    var isEdit = !!editingId;
+    if (isEdit) {
+      var idx = orders.findIndex(function (x) { return x.id === editingId; });
+      if (idx !== -1) {
+        data.id = editingId;
+        data.sample = orders[idx].sample || false;
+        orders[idx] = data;
+      }
+    } else {
+      data.id = uid();
+      data.sample = false;
+      orders.push(data);
+    }
+
+    saveOrders();
+    render();
+    closeForm();
+    showToast(isEdit ? "✓ Order updated and saved" : "✓ New order saved to the order book");
+  }
+
+  function deleteOrder() {
+    if (!editingId) return;
+    if (!confirm("Delete this order permanently?")) return;
+    orders = orders.filter(function (x) { return x.id !== editingId; });
+    saveOrders();
+    render();
+    closeForm();
+    showToast("Order deleted");
+  }
+
+  /* ---------- Events ---------- */
+  function bind() {
+    $("addOrderBtn").addEventListener("click", function () { openForm(null); });
+
+    $("modalClose").addEventListener("click", closeForm);
+    $("cancelBtn").addEventListener("click", closeForm);
+    $("deleteBtn").addEventListener("click", deleteOrder);
+    $("orderForm").addEventListener("submit", submitForm);
+    document.querySelectorAll('input[name="allergyStatus"]').forEach(function (r) {
+      r.addEventListener("change", toggleAllergyDetails);
+    });
+
+    $("detailClose").addEventListener("click", closeDetails);
+    $("detailBackdrop").addEventListener("click", function (e) { if (e.target === $("detailBackdrop")) closeDetails(); });
+    $("detailEditBtn").addEventListener("click", function () {
+      var o = orders.find(function (x) { return x.id === detailId; });
+      closeDetails();
+      if (o) openForm(o);
+    });
+    $("detailStatusBtn").addEventListener("click", function () {
+      var id = detailId;
+      closeDetails();
+      if (id) openStatus(id);
+    });
+
+    $("statusClose").addEventListener("click", closeStatus);
+    $("statusBackdrop").addEventListener("click", function (e) { if (e.target === $("statusBackdrop")) closeStatus(); });
+    $("statusOptions").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-set]");
+      if (b) setStatus(b.getAttribute("data-set"));
+    });
+
+    $("modalBackdrop").addEventListener("click", function (e) { if (e.target === $("modalBackdrop")) closeForm(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key !== "Escape") return;
+      if (!$("modalBackdrop").hidden) closeForm();
+      else if (!$("detailBackdrop").hidden) closeDetails();
+      else if (!$("statusBackdrop").hidden) closeStatus();
+    });
+
+    $("search").addEventListener("input", render);
+    $("filterSource").addEventListener("change", render);
+    $("filterStatus").addEventListener("change", render);
+    $("clearFilters").addEventListener("click", function () {
+      $("search").value = "";
+      $("filterSource").value = "";
+      $("filterStatus").value = "";
+      render();
+    });
+
+    $("orders").addEventListener("click", function (e) {
+      var v = e.target.closest("[data-view]");
+      var ed = e.target.closest("[data-edit]");
+      var st = e.target.closest("[data-status]");
+      if (v) openDetails(v.getAttribute("data-view"));
+      else if (ed) {
+        var o = orders.find(function (x) { return x.id === ed.getAttribute("data-edit"); });
+        if (o) openForm(o);
+      } else if (st) openStatus(st.getAttribute("data-status"));
+    });
+  }
+
+  /* ---------- Init ---------- */
+  loadOrders();
+  bind();
+  render();
+})();
+</script>
+</body>
+</html>
